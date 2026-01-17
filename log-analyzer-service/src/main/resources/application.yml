@@ -1,0 +1,57 @@
+spring:
+  application:
+    name: log-analyzer-service
+  profiles:
+    active: dev
+
+logging:
+  level:
+    root: INFO
+    com.company.loganalyzer: DEBUG
+
+server:
+  port: 8080
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+  kafka:
+    bootstrap-servers: localhost:9093
+    consumer:
+      group-id: log-analyzer-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.company.loganalyzer.model"
+        spring.json.value.default.type: "com.company.loganalyzer.model.LogEvent"
+  data:
+    elasticsearch:
+      uris: http://localhost:9200
+  datasource:
+    url: jdbc:postgresql://localhost:5432/loganalyzer
+    username: user
+    password: password
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY}
+      chat:
+        options:
+          model: gpt-3.5-turbo
+
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+  kafka:
+    bootstrap-servers: localhost:9092 # in test profile we might use testcontainers

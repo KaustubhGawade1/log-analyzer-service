@@ -1,0 +1,13 @@
+package com.company.loganalyzer;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class LogAnalyzerServiceApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(LogAnalyzerServiceApplication.class, args);
+	}
+
+}
