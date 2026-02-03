@@ -1,0 +1,3 @@
+com/demo/gateway/controller/GatewayController.class
+com/demo/gateway/chaos/ChaosMonkey.class
+com/demo/gateway/ApiGatewayApplication.class

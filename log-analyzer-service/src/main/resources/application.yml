@@ -3,6 +3,9 @@ spring:
     name: log-analyzer-service
   profiles:
     active: dev
+  docker:
+    compose:
+      enabled: false
 
 logging:
   level:
@@ -47,6 +50,14 @@ spring:
       chat:
         options:
           model: gpt-3.5-turbo
+
+# Zipkin Configuration for Flow Visualization
+zipkin:
+  base-url: ${ZIPKIN_BASE_URL:http://localhost:9411}
+  connect-timeout-ms: 5000
+  read-timeout-ms: 10000
+  default-lookback-ms: 3600000
+  default-limit: 100
 
 ---
 spring:

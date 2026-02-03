@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: order-service
+
+server:
+  port: 8083
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_URL:http://localhost:9411/api/v2/spans}
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
+services:
+  inventory-service: ${INVENTORY_SERVICE_URL:http://localhost:8084}
+  payment-service: ${PAYMENT_SERVICE_URL:http://localhost:8085}
+
+chaos:
+  latency:
+    enabled: ${CHAOS_LATENCY_ENABLED:false}
+    min-ms: ${CHAOS_LATENCY_MIN:100}
+    max-ms: ${CHAOS_LATENCY_MAX:2000}
+  error:
+    enabled: ${CHAOS_ERROR_ENABLED:false}
+    rate: ${CHAOS_ERROR_RATE:0.1}
+
+logging:
+  level:
+    root: INFO
+    com.demo: DEBUG
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%X{traceId:-},%X{spanId:-}] %-5level %logger{36} - %msg%n"

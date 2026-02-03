@@ -1,0 +1,104 @@
+version: '3.8'
+
+services:
+  # Zipkin - Distributed Tracing
+  zipkin:
+    image: openzipkin/zipkin
+    container_name: demo-zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - demo-network
+
+  # API Gateway - Entry Point
+  api-gateway:
+    build: ./api-gateway
+    container_name: demo-api-gateway
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_APPLICATION_NAME=api-gateway
+      - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
+      - USER_SERVICE_URL=http://user-service:8082
+      - ORDER_SERVICE_URL=http://order-service:8083
+      - CHAOS_LATENCY_ENABLED=${CHAOS_LATENCY_ENABLED:-false}
+      - CHAOS_ERROR_ENABLED=${CHAOS_ERROR_ENABLED:-false}
+      - CHAOS_ERROR_RATE=${CHAOS_ERROR_RATE:-0.1}
+    depends_on:
+      - zipkin
+      - user-service
+      - order-service
+    networks:
+      - demo-network
+
+  # User Service
+  user-service:
+    build: ./user-service
+    container_name: demo-user-service
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_APPLICATION_NAME=user-service
+      - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
+      - CHAOS_LATENCY_ENABLED=${CHAOS_LATENCY_ENABLED:-false}
+      - CHAOS_ERROR_ENABLED=${CHAOS_ERROR_ENABLED:-false}
+    depends_on:
+      - zipkin
+    networks:
+      - demo-network
+
+  # Order Service
+  order-service:
+    build: ./order-service
+    container_name: demo-order-service
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_APPLICATION_NAME=order-service
+      - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
+      - INVENTORY_SERVICE_URL=http://inventory-service:8084
+      - PAYMENT_SERVICE_URL=http://payment-service:8085
+      - CHAOS_LATENCY_ENABLED=${CHAOS_LATENCY_ENABLED:-false}
+      - CHAOS_ERROR_ENABLED=${CHAOS_ERROR_ENABLED:-false}
+    depends_on:
+      - zipkin
+      - inventory-service
+      - payment-service
+    networks:
+      - demo-network
+
+  # Inventory Service
+  inventory-service:
+    build: ./inventory-service
+    container_name: demo-inventory-service
+    ports:
+      - "8084:8084"
+    environment:
+      - SPRING_APPLICATION_NAME=inventory-service
+      - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
+      - CHAOS_LATENCY_ENABLED=${CHAOS_LATENCY_ENABLED:-false}
+      - CHAOS_ERROR_ENABLED=${CHAOS_ERROR_ENABLED:-false}
+    depends_on:
+      - zipkin
+    networks:
+      - demo-network
+
+  # Payment Service
+  payment-service:
+    build: ./payment-service
+    container_name: demo-payment-service
+    ports:
+      - "8085:8085"
+    environment:
+      - SPRING_APPLICATION_NAME=payment-service
+      - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
+      - CHAOS_LATENCY_ENABLED=${CHAOS_LATENCY_ENABLED:-false}
+      - CHAOS_ERROR_ENABLED=${CHAOS_ERROR_ENABLED:-false}
+    depends_on:
+      - zipkin
+    networks:
+      - demo-network
+
+networks:
+  demo-network:
+    driver: bridge
