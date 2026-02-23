@@ -10,6 +10,34 @@ services:
     networks:
       - demo-network
 
+  # Zookeeper - Kafka dependency
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: demo-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - demo-network
+
+  # Kafka - Log streaming
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: demo-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9093:9093"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - demo-network
+
   # API Gateway - Entry Point
   api-gateway:
     build: ./api-gateway
@@ -21,11 +49,13 @@ services:
       - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
       - USER_SERVICE_URL=http://user-service:8082
       - ORDER_SERVICE_URL=http://order-service:8083
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
       - CHAOS_LATENCY_ENABLED=${CHAOS_LATENCY_ENABLED:-false}
       - CHAOS_ERROR_ENABLED=${CHAOS_ERROR_ENABLED:-false}
       - CHAOS_ERROR_RATE=${CHAOS_ERROR_RATE:-0.1}
     depends_on:
       - zipkin
+      - kafka
       - user-service
       - order-service
     networks:
@@ -40,10 +70,12 @@ services:
     environment:
       - SPRING_APPLICATION_NAME=user-service
       - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
       - CHAOS_LATENCY_ENABLED=${CHAOS_LATENCY_ENABLED:-false}
       - CHAOS_ERROR_ENABLED=${CHAOS_ERROR_ENABLED:-false}
     depends_on:
       - zipkin
+      - kafka
     networks:
       - demo-network
 
@@ -58,10 +90,12 @@ services:
       - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
       - INVENTORY_SERVICE_URL=http://inventory-service:8084
       - PAYMENT_SERVICE_URL=http://payment-service:8085
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
       - CHAOS_LATENCY_ENABLED=${CHAOS_LATENCY_ENABLED:-false}
       - CHAOS_ERROR_ENABLED=${CHAOS_ERROR_ENABLED:-false}
     depends_on:
       - zipkin
+      - kafka
       - inventory-service
       - payment-service
     networks:
@@ -76,10 +110,12 @@ services:
     environment:
       - SPRING_APPLICATION_NAME=inventory-service
       - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
       - CHAOS_LATENCY_ENABLED=${CHAOS_LATENCY_ENABLED:-false}
       - CHAOS_ERROR_ENABLED=${CHAOS_ERROR_ENABLED:-false}
     depends_on:
       - zipkin
+      - kafka
     networks:
       - demo-network
 
@@ -92,10 +128,12 @@ services:
     environment:
       - SPRING_APPLICATION_NAME=payment-service
       - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
       - CHAOS_LATENCY_ENABLED=${CHAOS_LATENCY_ENABLED:-false}
       - CHAOS_ERROR_ENABLED=${CHAOS_ERROR_ENABLED:-false}
     depends_on:
       - zipkin
+      - kafka
     networks:
       - demo-network
 

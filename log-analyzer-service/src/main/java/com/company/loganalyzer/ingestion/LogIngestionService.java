@@ -63,6 +63,21 @@ public class LogIngestionService {
                 normalizedMessage,
                 clusterId,
                 logEvent.timestamp() != null ? logEvent.timestamp() : Instant.now());
+
+        // Extract trace context from metadata (set by KafkaLogForwarder in
+        // microservices-demo)
+        if (logEvent.metadata() != null) {
+            String traceId = logEvent.metadata().get("traceId");
+            String spanId = logEvent.metadata().get("spanId");
+            if (traceId != null)
+                logDoc.setTraceId(traceId);
+            if (spanId != null)
+                logDoc.setSpanId(spanId);
+            logDoc.setSource(traceId != null ? "microservices-demo" : "log-producer");
+        } else {
+            logDoc.setSource("log-producer");
+        }
+
         logRepository.save(logDoc);
 
         // 4. Detect Anomalies

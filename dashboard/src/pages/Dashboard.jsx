@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
-import { fetchIncidentStats, fetchIncidents, fetchTimeline } from '../services/api';
+import { fetchIncidentStats, fetchIncidents, fetchTimeline, fetchFlowStats } from '../services/api';
 
 function Dashboard() {
     const [stats, setStats] = useState(null);
     const [recentIncidents, setRecentIncidents] = useState([]);
     const [timeline, setTimeline] = useState([]);
+    const [flowStats, setFlowStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -22,6 +23,14 @@ function Dashboard() {
                 setStats(statsData);
                 setRecentIncidents(incidentsData.slice(0, 5));
                 setTimeline(timelineData);
+
+                // Load flow stats (non-blocking — Zipkin may not be running)
+                try {
+                    const flowData = await fetchFlowStats();
+                    setFlowStats(flowData);
+                } catch (_) {
+                    // Zipkin not available
+                }
             } catch (err) {
                 setError(err.message);
             } finally {
@@ -74,6 +83,43 @@ function Dashboard() {
                 <div className="stat-card">
                     <div className="stat-label">Error Bursts</div>
                     <div className="stat-value">{stats?.byType?.ERROR_BURST || 0}</div>
+                </div>
+            </div>
+
+            {/* Data Pipelines Section */}
+            <div className="pipelines-section">
+                <h3 style={{ marginBottom: '16px', fontSize: '1.125rem' }}>Data Pipelines</h3>
+                <div className="pipeline-cards">
+                    <div className="pipeline-card kafka">
+                        <div className="pipeline-icon">📨</div>
+                        <div className="pipeline-info">
+                            <div className="pipeline-name">Apache Kafka</div>
+                            <div className="pipeline-desc">Log Ingestion Pipeline</div>
+                            <div className="pipeline-detail">Topic: <code>app-logs</code> → Elasticsearch</div>
+                        </div>
+                        <div className="pipeline-stats">
+                            <span className="pipeline-badge active">● Active</span>
+                            <span className="pipeline-count">{stats?.total || 0} incidents detected</span>
+                        </div>
+                    </div>
+                    <div className="pipeline-card zipkin">
+                        <div className="pipeline-icon">🔀</div>
+                        <div className="pipeline-info">
+                            <div className="pipeline-name">Zipkin Tracing</div>
+                            <div className="pipeline-desc">Distributed Trace Pipeline</div>
+                            <div className="pipeline-detail">Micrometer → Zipkin → Flow Graphs</div>
+                        </div>
+                        <div className="pipeline-stats">
+                            <span className={`pipeline-badge ${flowStats ? 'active' : 'inactive'}`}>
+                                ● {flowStats ? 'Active' : 'Unavailable'}
+                            </span>
+                            {flowStats && (
+                                <span className="pipeline-count">
+                                    {flowStats.totalFlows} traces · {flowStats.serviceCount} services
+                                </span>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
 

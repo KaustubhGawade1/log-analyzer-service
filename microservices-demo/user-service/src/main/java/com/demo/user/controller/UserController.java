@@ -1,6 +1,7 @@
 package com.demo.user.controller;
 
 import com.demo.user.chaos.ChaosMonkey;
+import com.demo.user.kafka.KafkaLogForwarder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -16,12 +17,14 @@ public class UserController {
 
     private static final Logger log = LoggerFactory.getLogger(UserController.class);
     private final ChaosMonkey chaosMonkey;
+    private final KafkaLogForwarder forwarder;
 
     // Simulated user database
     private final Map<String, Map<String, Object>> users = new ConcurrentHashMap<>();
 
-    public UserController(ChaosMonkey chaosMonkey) {
+    public UserController(ChaosMonkey chaosMonkey, KafkaLogForwarder forwarder) {
         this.chaosMonkey = chaosMonkey;
+        this.forwarder = forwarder;
         // Pre-populate some users
         users.put("user-1",
                 Map.of("id", "user-1", "name", "John Doe", "email", "john@example.com", "status", "ACTIVE"));
@@ -34,26 +37,31 @@ public class UserController {
     @GetMapping("/{userId}")
     public ResponseEntity<?> getUser(@PathVariable String userId) {
         log.info("Getting user: {}", userId);
+        forwarder.info("Getting user: " + userId);
         chaosMonkey.maybeInjectChaos();
 
         var user = users.get(userId);
         if (user == null) {
             log.warn("User not found: {}", userId);
+            forwarder.warn("User not found: " + userId);
             return ResponseEntity.notFound().build();
         }
 
         log.info("User {} found: {}", userId, user.get("name"));
+        forwarder.info("User " + userId + " found: " + user.get("name"));
         return ResponseEntity.ok(user);
     }
 
     @PostMapping("/{userId}/validate")
     public ResponseEntity<?> validateUser(@PathVariable String userId) {
         log.info("Validating user: {}", userId);
+        forwarder.info("Validating user: " + userId);
         chaosMonkey.maybeInjectChaos();
 
         var user = users.get(userId);
         if (user == null) {
             log.warn("Validation failed - user not found: {}", userId);
+            forwarder.warn("Validation failed - user not found: " + userId);
             return ResponseEntity.badRequest().body(Map.of(
                     "valid", false,
                     "reason", "User not found"));
@@ -61,12 +69,14 @@ public class UserController {
 
         if ("INACTIVE".equals(user.get("status"))) {
             log.warn("Validation failed - user inactive: {}", userId);
+            forwarder.warn("Validation failed - user inactive: " + userId);
             return ResponseEntity.badRequest().body(Map.of(
                     "valid", false,
                     "reason", "User is inactive"));
         }
 
         log.info("User {} validated successfully", userId);
+        forwarder.info("User " + userId + " validated successfully");
         return ResponseEntity.ok(Map.of(
                 "valid", true,
                 "userId", userId,

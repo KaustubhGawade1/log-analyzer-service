@@ -1,6 +1,7 @@
 package com.demo.payment.controller;
 
 import com.demo.payment.chaos.ChaosMonkey;
+import com.demo.payment.kafka.KafkaLogForwarder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -17,12 +18,14 @@ public class PaymentController {
 
     private static final Logger log = LoggerFactory.getLogger(PaymentController.class);
     private final ChaosMonkey chaosMonkey;
+    private final KafkaLogForwarder forwarder;
 
     // Simulated payment database
     private final Map<String, Map<String, Object>> payments = new ConcurrentHashMap<>();
 
-    public PaymentController(ChaosMonkey chaosMonkey) {
+    public PaymentController(ChaosMonkey chaosMonkey, KafkaLogForwarder forwarder) {
         this.chaosMonkey = chaosMonkey;
+        this.forwarder = forwarder;
     }
 
     @PostMapping("/process")
@@ -32,6 +35,7 @@ public class PaymentController {
         double amount = ((Number) request.get("amount")).doubleValue();
 
         log.info("Processing payment for order {} - user: {}, amount: ${}", orderId, userId, amount);
+        forwarder.info("Processing payment for order " + orderId + " - user: " + userId + ", amount: $" + amount);
         chaosMonkey.maybeInjectChaos();
 
         // Simulate payment processing
@@ -56,6 +60,7 @@ public class PaymentController {
         payments.put(paymentId, payment);
 
         log.info("Payment {} processed successfully for order {}", paymentId, orderId);
+        forwarder.info("Payment " + paymentId + " processed successfully for order " + orderId);
         return ResponseEntity.ok(Map.of(
                 "success", true,
                 "paymentId", paymentId,

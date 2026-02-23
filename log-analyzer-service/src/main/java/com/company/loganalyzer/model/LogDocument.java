@@ -31,6 +31,15 @@ public class LogDocument {
     @Field(type = FieldType.Date)
     private Instant timestamp;
 
+    @Field(type = FieldType.Keyword)
+    private String traceId;
+
+    @Field(type = FieldType.Keyword)
+    private String spanId;
+
+    @Field(type = FieldType.Keyword)
+    private String source;
+
     public LogDocument() {
     }
 
@@ -99,5 +108,29 @@ public class LogDocument {
 
     public void setTimestamp(Instant timestamp) {
         this.timestamp = timestamp;
+    }
+
+    public String getTraceId() {
+        return traceId;
+    }
+
+    public void setTraceId(String traceId) {
+        this.traceId = traceId;
+    }
+
+    public String getSpanId() {
+        return spanId;
+    }
+
+    public void setSpanId(String spanId) {
+        this.spanId = spanId;
+    }
+
+    public String getSource() {
+        return source;
+    }
+
+    public void setSource(String source) {
+        this.source = source;
     }
 }

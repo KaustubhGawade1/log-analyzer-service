@@ -1,6 +1,7 @@
 package com.demo.inventory.controller;
 
 import com.demo.inventory.chaos.ChaosMonkey;
+import com.demo.inventory.kafka.KafkaLogForwarder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -16,13 +17,15 @@ public class InventoryController {
 
     private static final Logger log = LoggerFactory.getLogger(InventoryController.class);
     private final ChaosMonkey chaosMonkey;
+    private final KafkaLogForwarder forwarder;
 
     // Simulated inventory database
     private final Map<String, Integer> inventory = new ConcurrentHashMap<>();
     private final Map<String, Map<String, Object>> reservations = new ConcurrentHashMap<>();
 
-    public InventoryController(ChaosMonkey chaosMonkey) {
+    public InventoryController(ChaosMonkey chaosMonkey, KafkaLogForwarder forwarder) {
         this.chaosMonkey = chaosMonkey;
+        this.forwarder = forwarder;
         // Pre-populate inventory
         inventory.put("product-1", 100);
         inventory.put("product-2", 50);
@@ -33,15 +36,18 @@ public class InventoryController {
     @GetMapping("/{productId}")
     public ResponseEntity<?> checkStock(@PathVariable String productId) {
         log.info("Checking stock for product: {}", productId);
+        forwarder.info("Checking stock for product: " + productId);
         chaosMonkey.maybeInjectChaos();
 
         Integer stock = inventory.get(productId);
         if (stock == null) {
             log.warn("Product not found: {}", productId);
+            forwarder.warn("Product not found: " + productId);
             return ResponseEntity.notFound().build();
         }
 
         log.info("Stock for {}: {}", productId, stock);
+        forwarder.info("Stock for " + productId + ": " + stock);
         return ResponseEntity.ok(Map.of(
                 "productId", productId,
                 "availableQuantity", stock,
@@ -55,11 +61,13 @@ public class InventoryController {
         String orderId = (String) request.get("orderId");
 
         log.info("Reserving {} units of {} for order {}", quantity, productId, orderId);
+        forwarder.info("Reserving " + quantity + " units of " + productId + " for order " + orderId);
         chaosMonkey.maybeInjectChaos();
 
         Integer stock = inventory.get(productId);
         if (stock == null) {
             log.error("Product not found: {}", productId);
+            forwarder.error("Product not found: " + productId);
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
                     "reason", "Product not found"));
@@ -67,6 +75,7 @@ public class InventoryController {
 
         if (stock < quantity) {
             log.warn("Insufficient stock for {}: requested {}, available {}", productId, quantity, stock);
+            forwarder.warn("Insufficient stock for " + productId + ": requested " + quantity + ", available " + stock);
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
                     "reason", "Insufficient stock",
@@ -88,6 +97,7 @@ public class InventoryController {
         reservations.put(reservationId, reservation);
 
         log.info("Reservation {} created for order {}", reservationId, orderId);
+        forwarder.info("Reservation " + reservationId + " created for order " + orderId);
         return ResponseEntity.ok(Map.of(
                 "success", true,
                 "reservationId", reservationId,

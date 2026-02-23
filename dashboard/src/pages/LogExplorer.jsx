@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { fetchLogs, fetchServices } from '../services/api';
 
 function LogExplorer() {
@@ -33,14 +34,13 @@ function LogExplorer() {
 
     const handleSearch = (e) => {
         e.preventDefault();
-        // Trigger search (already reactive via useEffect)
     };
 
     return (
         <div>
             <header className="page-header">
                 <h1>Log Explorer</h1>
-                <p>Search and filter through application logs</p>
+                <p>Search and filter through application logs ingested via Kafka</p>
             </header>
 
             <form onSubmit={handleSearch} className="input-group">
@@ -100,10 +100,11 @@ function LogExplorer() {
                             <thead>
                                 <tr>
                                     <th style={{ width: '180px' }}>Timestamp</th>
-                                    <th style={{ width: '100px' }}>Level</th>
-                                    <th style={{ width: '150px' }}>Service</th>
+                                    <th style={{ width: '80px' }}>Level</th>
+                                    <th style={{ width: '140px' }}>Service</th>
                                     <th>Message</th>
-                                    <th style={{ width: '120px' }}>Cluster</th>
+                                    <th style={{ width: '120px' }}>Trace ID</th>
+                                    <th style={{ width: '90px' }}>Source</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -113,7 +114,7 @@ function LogExplorer() {
                                             {new Date(log.timestamp).toLocaleString()}
                                         </td>
                                         <td>
-                                            <span className={`badge ${log.level.toLowerCase()}`}>
+                                            <span className={`badge ${log.level?.toLowerCase()}`}>
                                                 {log.level}
                                             </span>
                                         </td>
@@ -121,23 +122,43 @@ function LogExplorer() {
                                         <td style={{
                                             fontFamily: 'monospace',
                                             fontSize: '0.8rem',
-                                            maxWidth: '500px',
+                                            maxWidth: '400px',
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
                                             whiteSpace: 'nowrap'
                                         }}>
                                             {log.message}
                                         </td>
-                                        <td style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: '#94a3b8' }}>
-                                            {log.clusterId ? log.clusterId.substring(0, 8) + '...' : '-'}
+                                        <td>
+                                            {log.traceId ? (
+                                                <Link
+                                                    to="/flows"
+                                                    className="trace-link"
+                                                    title={`View trace: ${log.traceId}`}
+                                                >
+                                                    🔗 {log.traceId.substring(0, 8)}…
+                                                </Link>
+                                            ) : (
+                                                <span style={{ color: '#4a4a6a', fontSize: '0.75rem' }}>—</span>
+                                            )}
+                                        </td>
+                                        <td>
+                                            {log.source === 'microservices-demo' ? (
+                                                <span className="source-badge demo">🔀 Demo</span>
+                                            ) : (
+                                                <span className="source-badge sim">📨 Sim</span>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
-                    <div style={{ marginTop: '16px', color: '#94a3b8', fontSize: '0.875rem' }}>
-                        Showing {logs.length} logs
+                    <div style={{ marginTop: '16px', color: '#94a3b8', fontSize: '0.875rem', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Showing {logs.length} logs</span>
+                        <span>
+                            {logs.filter(l => l.traceId).length} with trace context
+                        </span>
                     </div>
                 </div>
             )}
